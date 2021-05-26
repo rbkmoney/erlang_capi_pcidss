@@ -60,9 +60,9 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                 )}}
     catch
         invalid_merchant_id ->
-          throw({ok, logic_error(invalidRequest, <<"Tokenized card data is invalid">>)});
+            throw({ok, logic_error(invalidRequest, <<"Tokenized card data is invalid">>)});
         Result ->
-          Result
+            Result
     end;
 %%
 
