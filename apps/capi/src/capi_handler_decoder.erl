@@ -12,7 +12,7 @@
 
 -export_type([decode_data/0]).
 
--type encrypted_token() :: capi_crypto:encrypted_token().
+-type encrypted_token() :: capi_payment_tool:token().
 -type decode_data() :: #{binary() => term()}.
 
 decode_payment_tool_details({bank_card, V}) ->

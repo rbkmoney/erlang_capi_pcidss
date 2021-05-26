@@ -44,26 +44,19 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                 #{<<"paymentToolType">> := <<"MobileCommerceData">>} ->
                     {process_mobile_commerce_data(Data, Context), <<>>, undefined}
             end,
+        TokenData1 = choose_token_deadline(#{payment_tool => PaymentTool}, PaymentToolDeadline),
+        TokenData = choose_token_link(TokenData1, Context),
         PaymentResource = #domain_DisposablePaymentResource{
             payment_tool = PaymentTool,
             payment_session_id = PaymentSessionID,
             client_info = capi_handler_encoder:encode_client_info(ClientInfo)
         },
-        % Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
-        % Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
-        TokenDeadline =
-            case {PaymentToolDeadline, payment_tool_token_deadline()} of
-                {ToolDeadline, DefaultDeadline} when is_atom(ToolDeadline) -> DefaultDeadline;
-                {ToolDeadline, DefaultDeadline} when ToolDeadline < DefaultDeadline -> ToolDeadline;
-                {_, DefaultDeadline} -> DefaultDeadline
-            end,
-        EncryptedToken = capi_crypto:create_encrypted_payment_tool_token(PaymentTool, TokenDeadline),
         {ok,
             {201, #{},
                 capi_handler_decoder:decode_disposable_payment_resource(
                     PaymentResource,
-                    EncryptedToken,
-                    TokenDeadline
+                    capi_payment_tool:encode_token(TokenData),
+                    maps:get(valid_until, TokenData)
                 )}}
     catch
         Result -> Result
@@ -74,6 +67,32 @@ process_request(_OperationID, _Req, _Context) ->
     {error, noimpl}.
 
 %%
+
+-spec choose_token_deadline(capi_payment_tool:token_data(), capi_utils:deadline()) -> capi_payment_tool:token_data().
+choose_token_deadline(TokenData, PaymentToolDeadline) ->
+    % Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
+    % Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
+    ValidUntil =
+        case {PaymentToolDeadline, payment_tool_token_deadline()} of
+            {ToolDeadline, DefaultDeadline} when is_atom(ToolDeadline) -> DefaultDeadline;
+            {ToolDeadline, DefaultDeadline} when ToolDeadline < DefaultDeadline -> ToolDeadline;
+            {_, DefaultDeadline} -> DefaultDeadline
+        end,
+    TokenData#{valid_until => ValidUntil}.
+
+-spec choose_token_link(capi_payment_tool:token_data(), capi_handler:processing_context()) ->
+    capi_payment_tool:token_data().
+choose_token_link(TokenData, Context) ->
+    Claims = capi_handler_utils:get_auth_context(Context),
+    case uac_authorizer_jwt:get_claim(<<"token_link">>, Claims, undefined) of
+        undefined ->
+            TokenData;
+        {invoice, InvoiceID} ->
+            TokenData#{invoice_id => InvoiceID};
+        Value ->
+            _ = logger:notice("Unexpected token_link value: ~p", [Value]),
+            TokenData
+    end.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().
 payment_tool_token_deadline() ->
@@ -339,8 +358,27 @@ get_token_provider_service_name(Data) ->
 
 encode_wrapped_payment_tool(Data) ->
     #paytoolprv_WrappedPaymentTool{
-        request = encode_payment_request(Data)
+        request = encode_payment_request(Data),
+        realm = encode_realm_mode(Data)
     }.
+
+encode_realm_mode(Data) ->
+    MerchantID =
+        case Data of
+            #{<<"provider">> := <<"GooglePay">>} ->
+                maps:get(<<"gatewayMerchantID">>, Data);
+            #{<<"provider">> := <<"YandexPay">>} ->
+                maps:get(<<"gatewayMerchantID">>, Data);
+            _ ->
+                undefined
+        end,
+    case MerchantID of
+        undefined ->
+            undefined;
+        MerchantID ->
+            {RealmMode, _, _} = capi_handler_utils:unwrap_merchant_id(MerchantID),
+            RealmMode
+    end.
 
 encode_payment_request(#{<<"provider">> := <<"ApplePay">>} = Data) ->
     {apple, #paytoolprv_ApplePayRequest{
