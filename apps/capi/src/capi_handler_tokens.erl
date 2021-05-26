@@ -59,7 +59,10 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                     maps:get(valid_until, TokenData)
                 )}}
     catch
-        Result -> Result
+        invalid_merchant_id ->
+          throw({ok, logic_error(invalidRequest, <<"Tokenized card data is invalid">>)});
+        Result ->
+          Result
     end;
 %%
 
@@ -377,7 +380,7 @@ encode_realm_mode(Data) ->
             undefined;
         MerchantID ->
             {RealmMode, _, _} = capi_handler_utils:unwrap_merchant_id(MerchantID),
-            RealmMode
+            erlang:binary_to_atom(RealmMode, utf8)
     end.
 
 encode_payment_request(#{<<"provider">> := <<"ApplePay">>} = Data) ->

@@ -41,9 +41,9 @@ decrypt_payment_tool_token(Token) ->
     end.
 
 -spec encode_token(token_data()) -> token().
-encode_token(UnwrappedToken) ->
-    PaymentToolToken = encode_payment_tool_token(UnwrappedToken),
-    ThriftType = {struct, union, {dmsl_payment_tool_token_thrift, 'PaymentToolToken'}},
+encode_token(TokenData) ->
+    PaymentToolToken = encode_payment_tool_token(TokenData),
+    ThriftType = {struct, struct, {dmsl_payment_tool_token_thrift, 'PaymentToolToken'}},
     {ok, EncodedToken} = lechiffre:encode(ThriftType, PaymentToolToken),
     TokenVersion = token_version(),
     <<TokenVersion/binary, ".", EncodedToken/binary>>.
@@ -109,7 +109,7 @@ encode_payment_tool_token_payload({digital_wallet, DigitalWallet}) ->
     }};
 encode_payment_tool_token_payload({crypto_currency, CryptoCurrency}) ->
     {crypto_currency_payload, #ptt_CryptoCurrencyPayload{
-        crypto_currency = CryptoCurrency
+        crypto_currency_deprecated = CryptoCurrency
     }};
 encode_payment_tool_token_payload({mobile_commerce, MobileCommerce}) ->
     {mobile_commerce_payload, #ptt_MobileCommercePayload{

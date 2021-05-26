@@ -802,6 +802,7 @@ create_googlepay_tokenized_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolDetails">> := Details = #{
             <<"paymentSystem">> := <<"mastercard">>,
@@ -814,7 +815,7 @@ create_googlepay_tokenized_payment_resource_ok_test(Config) ->
             <<"paymentTool">> => #{
                 <<"paymentToolType">> => <<"TokenizedCardData">>,
                 <<"provider">> => <<"GooglePay">>,
-                <<"gatewayMerchantID">> => <<"SomeMerchantID">>,
+                <<"gatewayMerchantID">> => SomeMerchantID,
                 <<"paymentToken">> => #{}
             },
             <<"clientInfo">> => ClientInfo
@@ -845,6 +846,7 @@ create_googlepay_plain_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolToken">> := PaymentToolToken,
         <<"paymentToolDetails">> := Details = #{
@@ -858,7 +860,7 @@ create_googlepay_plain_payment_resource_ok_test(Config) ->
             <<"paymentTool">> => #{
                 <<"paymentToolType">> => <<"TokenizedCardData">>,
                 <<"provider">> => <<"GooglePay">>,
-                <<"gatewayMerchantID">> => <<"SomeMerchantID">>,
+                <<"gatewayMerchantID">> => SomeMerchantID,
                 <<"paymentToken">> => #{}
             },
             <<"clientInfo">> => ClientInfo
@@ -893,6 +895,7 @@ create_yandexpay_tokenized_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolToken">> := EncryptedToken,
         <<"paymentToolDetails">> := Details = #{
@@ -906,7 +909,7 @@ create_yandexpay_tokenized_payment_resource_ok_test(Config) ->
             <<"paymentTool">> => #{
                 <<"paymentToolType">> => <<"TokenizedCardData">>,
                 <<"provider">> => <<"YandexPay">>,
-                <<"gatewayMerchantID">> => <<"SomeMerchantID">>,
+                <<"gatewayMerchantID">> => SomeMerchantID,
                 <<"paymentToken">> => #{}
             },
             <<"clientInfo">> => ClientInfo
