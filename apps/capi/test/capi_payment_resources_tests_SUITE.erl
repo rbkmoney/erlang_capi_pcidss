@@ -915,7 +915,7 @@ create_yandexpay_tokenized_payment_resource_ok_test(Config) ->
             <<"clientInfo">> => ClientInfo
         }),
     ?assertEqual(error, maps:find(<<"first6">>, Details)),
-    {ok, {PaymentTool, _Deadline}} = capi_payment_tool:decrypt_payment_tool_token(EncryptedToken),
+    {ok, {PaymentTool, _Deadline}} = capi_crypto:decrypt_payment_tool_token(EncryptedToken),
     ?assertMatch(
         {bank_card, #domain_BankCard{
             metadata = #{
@@ -1067,7 +1067,7 @@ valid_until_payment_resource_test(Config) ->
                 <<"test fingerprint">>
         }
     }),
-    {ok, {_PaymentTool, DeadlineToken}} = capi_payment_tool:decrypt_payment_tool_token(PaymentToolToken),
+    {ok, {_PaymentTool, DeadlineToken}} = capi_crypto:decrypt_payment_tool_token(PaymentToolToken),
     Deadline = capi_utils:deadline_from_binary(ValidUntil),
     ?assertEqual(Deadline, DeadlineToken).
 
@@ -1080,7 +1080,7 @@ check_support_decrypt_v2_test(_Config) ->
         "V2lTSmRnbzB0MCJ9..j3zEyCqyfQjpEtQM.JAc3kqJm6zbn0fMZGlK_t14Yt4PvgOuoVL2DtkEgIXIqrxxWFbykKBGxQvwYisJYIUJJwt"
         "YbwvuGEODcK2uTC2quPD2Ejew66DLJF2xcAwE.MNVimzi8r-5uTATNalgoBQ"
     >>,
-    {ok, {PaymentTool, ValidUntil}} = capi_payment_tool:decrypt_payment_tool_token(PaymentToolToken),
+    {ok, {PaymentTool, ValidUntil}} = capi_crypto:decrypt_payment_tool_token(PaymentToolToken),
     ?assertEqual(
         {mobile_commerce, #domain_MobileCommerce{
             phone = #domain_MobilePhone{
@@ -1119,7 +1119,7 @@ issue_dummy_token(ACL, Config) ->
     Token.
 
 decrypt_payment_tool_token(PaymentToolToken) ->
-    {ok, {PaymentTool, _ValidUntil}} = capi_payment_tool:decrypt_payment_tool_token(PaymentToolToken),
+    {ok, {PaymentTool, _ValidUntil}} = capi_crypto:decrypt_payment_tool_token(PaymentToolToken),
     PaymentTool.
 
 get_keysource(Key, Config) ->

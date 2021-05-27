@@ -55,7 +55,7 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
             {201, #{},
                 capi_handler_decoder:decode_disposable_payment_resource(
                     PaymentResource,
-                    capi_payment_tool:encode_token(TokenData),
+                    capi_crypto:encode_token(TokenData),
                     maps:get(valid_until, TokenData)
                 )}}
     catch
@@ -71,7 +71,7 @@ process_request(_OperationID, _Req, _Context) ->
 
 %%
 
--spec choose_token_deadline(capi_payment_tool:token_data(), capi_utils:deadline()) -> capi_payment_tool:token_data().
+-spec choose_token_deadline(capi_crypto:token_data(), capi_utils:deadline()) -> capi_crypto:token_data().
 choose_token_deadline(TokenData, PaymentToolDeadline) ->
     % Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
     % Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
@@ -83,8 +83,8 @@ choose_token_deadline(TokenData, PaymentToolDeadline) ->
         end,
     TokenData#{valid_until => ValidUntil}.
 
--spec choose_token_link(capi_payment_tool:token_data(), capi_handler:processing_context()) ->
-    capi_payment_tool:token_data().
+-spec choose_token_link(capi_crypto:token_data(), capi_handler:processing_context()) ->
+    capi_crypto:token_data().
 choose_token_link(TokenData, Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
     case uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined) of
@@ -587,7 +587,7 @@ encode_tokenized_session_data(#paytoolprv_UnwrappedPaymentTool{
 
 process_crypto_wallet_data(Data) ->
     #{<<"cryptoCurrency">> := CryptoCurrency} = Data,
-    {crypto_currency, capi_handler_decoder:convert_crypto_currency_from_swag(CryptoCurrency)}.
+    {crypto_currency_deprecated, capi_handler_decoder:convert_crypto_currency_from_swag(CryptoCurrency)}.
 
 %%
 
