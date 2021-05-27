@@ -5,7 +5,7 @@
 -type token() :: binary().
 -type token_data() :: #{
     payment_tool := payment_tool(),
-    valid_until := deadline(),
+    valid_until => deadline(),
     invoice_id => binary(),
     customer_id => binary()
 }.

@@ -71,20 +71,16 @@ process_request(_OperationID, _Req, _Context) ->
 
 %%
 
+% Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
+% Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
 -spec choose_token_deadline(capi_crypto:token_data(), capi_utils:deadline()) -> capi_crypto:token_data().
+choose_token_deadline(TokenData, undefined) ->
+    TokenData#{valid_until => payment_tool_token_deadline()};
 choose_token_deadline(TokenData, PaymentToolDeadline) ->
-    % Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
-    % Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
-    ValidUntil =
-        case {PaymentToolDeadline, payment_tool_token_deadline()} of
-            {ToolDeadline, DefaultDeadline} when is_atom(ToolDeadline) -> DefaultDeadline;
-            {ToolDeadline, DefaultDeadline} when ToolDeadline < DefaultDeadline -> ToolDeadline;
-            {_, DefaultDeadline} -> DefaultDeadline
-        end,
+    ValidUntil = erlang:min(PaymentToolDeadline, payment_tool_token_deadline()),
     TokenData#{valid_until => ValidUntil}.
 
--spec choose_token_link(capi_crypto:token_data(), capi_handler:processing_context()) ->
-    capi_crypto:token_data().
+-spec choose_token_link(capi_crypto:token_data(), capi_handler:processing_context()) -> capi_crypto:token_data().
 choose_token_link(TokenData, Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
     case uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined) of
@@ -356,6 +352,13 @@ get_token_provider_service_name(Data) ->
             payment_tool_provider_yandex_pay
     end.
 
+get_token_merchant_id(#{<<"provider">> := <<"GooglePay">>} = Data) ->
+    maps:get(<<"gatewayMerchantID">>, Data);
+get_token_merchant_id(#{<<"provider">> := <<"YandexPay">>} = Data) ->
+    maps:get(<<"gatewayMerchantID">>, Data);
+get_token_merchant_id(_Data) ->
+    undefined.
+
 encode_wrapped_payment_tool(Data) ->
     #paytoolprv_WrappedPaymentTool{
         request = encode_payment_request(Data),
@@ -363,21 +366,21 @@ encode_wrapped_payment_tool(Data) ->
     }.
 
 encode_realm_mode(Data) ->
-    MerchantID =
-        case Data of
-            #{<<"provider">> := <<"GooglePay">>} ->
-                maps:get(<<"gatewayMerchantID">>, Data);
-            #{<<"provider">> := <<"YandexPay">>} ->
-                maps:get(<<"gatewayMerchantID">>, Data);
-            _ ->
-                undefined
+    RealmMode =
+        case get_token_merchant_id(Data) of
+            undefined ->
+                undefined;
+            MerchantID ->
+                {Value, _} = capi_handler_utils:unwrap_merchant_id(MerchantID),
+                Value
         end,
-    case MerchantID of
+    case RealmMode of
         undefined ->
             undefined;
-        MerchantID ->
-            {RealmMode, _, _} = capi_handler_utils:unwrap_merchant_id(MerchantID),
-            erlang:binary_to_atom(RealmMode, utf8)
+        <<"test">> ->
+            test;
+        <<"live">> ->
+            live
     end.
 
 encode_payment_request(#{<<"provider">> := <<"ApplePay">>} = Data) ->

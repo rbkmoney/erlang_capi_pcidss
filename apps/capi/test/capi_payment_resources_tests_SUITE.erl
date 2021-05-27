@@ -802,7 +802,7 @@ create_googlepay_tokenized_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
-    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolDetails">> := Details = #{
             <<"paymentSystem">> := <<"mastercard">>,
@@ -846,7 +846,7 @@ create_googlepay_plain_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
-    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolToken">> := PaymentToolToken,
         <<"paymentToolDetails">> := Details = #{
@@ -895,7 +895,7 @@ create_yandexpay_tokenized_payment_resource_ok_test(Config) ->
         Config
     ),
     ClientInfo = #{<<"fingerprint">> => <<"test fingerprint">>},
-    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, ?STRING, <<"SomeMerchantID">>),
+    SomeMerchantID = capi_handler_utils:wrap_merchant_id(<<"test">>, <<"SomeMerchantID">>),
     {ok, #{
         <<"paymentToolToken">> := EncryptedToken,
         <<"paymentToolDetails">> := Details = #{
