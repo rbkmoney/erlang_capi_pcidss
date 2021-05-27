@@ -87,14 +87,11 @@ choose_token_deadline(TokenData, PaymentToolDeadline) ->
     capi_payment_tool:token_data().
 choose_token_link(TokenData, Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
-    case uac_authorizer_jwt:get_claim(<<"token_link">>, Claims, undefined) of
+    case uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined) of
         undefined ->
             TokenData;
-        {invoice, InvoiceID} ->
-            TokenData#{invoice_id => InvoiceID};
-        Value ->
-            _ = logger:notice("Unexpected token_link value: ~p", [Value]),
-            TokenData
+        InvoiceID ->
+            TokenData#{invoice_id => InvoiceID}
     end.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().
