@@ -54,7 +54,7 @@
     authorization_error_no_permission_test/1,
     authorization_bad_token_error_test/1,
 
-    invoice_link_payment_resource_test/1,
+    invoice_restriction_payment_resource_test/1,
     valid_until_payment_resource_test/1,
     check_support_decrypt_v2_test/1
 ]).
@@ -127,7 +127,7 @@ groups() ->
             authorization_error_no_permission_test,
             authorization_bad_token_error_test,
 
-            invoice_link_payment_resource_test,
+            invoice_restriction_payment_resource_test,
             valid_until_payment_resource_test,
             check_support_decrypt_v2_test
         ]},
@@ -1055,8 +1055,8 @@ authorization_bad_token_error_test(Config) ->
         ?TEST_PAYMENT_TOOL_ARGS
     ).
 
--spec invoice_link_payment_resource_test(_) -> _.
-invoice_link_payment_resource_test(Config) ->
+-spec invoice_restriction_payment_resource_test(_) -> _.
+invoice_restriction_payment_resource_test(Config) ->
     {ok, #{<<"paymentToolToken">> := PaymentToolToken}} =
       capi_client_tokens:create_payment_resource(?config(context, Config), #{
         <<"paymentTool">> => #{
@@ -1065,8 +1065,9 @@ invoice_link_payment_resource_test(Config) ->
         },
         <<"clientInfo">> => #{<<"fingerprint">> => <<"test fingerprint">>}
     }),
-    {ok, #{invoice_id := InvoiceID}} = capi_crypto:decode_token(PaymentToolToken),
-    ?assertEqual(?STRING, InvoiceID).
+    logger:warning("PaymentToolToken: ~p", [PaymentToolToken]),
+    {ok, #{restriction := Restriction}} = capi_crypto:decode_token(PaymentToolToken),
+    ?assertEqual({invoice_id, ?STRING}, Restriction).
 
 -spec valid_until_payment_resource_test(_) -> _.
 valid_until_payment_resource_test(Config) ->

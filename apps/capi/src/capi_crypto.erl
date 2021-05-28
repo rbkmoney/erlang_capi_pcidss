@@ -6,12 +6,12 @@
 -type token_data() :: #{
     payment_tool := payment_tool(),
     valid_until => deadline(),
-    invoice_id => binary(),
-    customer_id => binary()
+    restriction => restriction_using()
 }.
 -type payment_tool() :: dmsl_domain_thrift:'PaymentTool'().
 -type payment_tool_token() :: dmsl_payment_tool_token_thrift:'PaymentToolToken'().
 -type payment_tool_token_payload() :: dmsl_payment_tool_token_thrift:'PaymentToolTokenPayload'().
+-type restriction_using() :: dmsl_payment_tool_token_thrift:'RestrictionUsing'().
 -type deadline() :: capi_utils:deadline().
 
 -export_type([token/0]).
@@ -72,27 +72,25 @@ decrypt_token(EncryptedPaymentToolToken) ->
                 genlib_map:compact(#{
                     payment_tool => decode_payment_tool_token_payload(PaymentToolToken#ptt_PaymentToolToken.payload),
                     valid_until => decode_deadline(PaymentToolToken#ptt_PaymentToolToken.valid_until),
-                    invoice_id => PaymentToolToken#ptt_PaymentToolToken.invoice_id,
-                    customer_id => PaymentToolToken#ptt_PaymentToolToken.customer_id
+                    restriction => PaymentToolToken#ptt_PaymentToolToken.restriction
                 })};
         {error, _} = Error ->
             Error
     end.
+
+-spec encode_payment_tool_token(token_data()) -> payment_tool_token().
+encode_payment_tool_token(#{payment_tool := PaymentTool} = TokenData) ->
+    #ptt_PaymentToolToken{
+        payload = encode_payment_tool_token_payload(PaymentTool),
+        valid_until = encode_deadline(maps:get(valid_until, TokenData, undefined)),
+        restriction = maps:get(restriction, TokenData, undefined)
+    }.
 
 -spec encode_deadline(deadline()) -> binary() | undefined.
 encode_deadline(undefined) ->
     undefined;
 encode_deadline(Deadline) ->
     capi_utils:deadline_to_binary(Deadline).
-
--spec encode_payment_tool_token(token_data()) -> payment_tool_token().
-encode_payment_tool_token(#{payment_tool := PaymentTool, valid_until := ValidUntil} = TokenData) ->
-    #ptt_PaymentToolToken{
-        payload = encode_payment_tool_token_payload(PaymentTool),
-        valid_until = encode_deadline(ValidUntil),
-        invoice_id = maps:get(invoice_id, TokenData, undefined),
-        customer_id = maps:get(customer_id, TokenData, undefined)
-    }.
 
 -spec encode_payment_tool_token_payload(payment_tool()) -> payment_tool_token_payload().
 encode_payment_tool_token_payload({bank_card, BankCard}) ->

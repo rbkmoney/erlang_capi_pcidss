@@ -87,7 +87,7 @@ choose_token_link(TokenData, Context) ->
         undefined ->
             TokenData;
         InvoiceID ->
-            TokenData#{invoice_id => InvoiceID}
+            TokenData#{restriction => {invoice_id, InvoiceID}}
     end.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().
