@@ -17,8 +17,6 @@
 -export([merge_and_compact/2]).
 
 -export([wrap_payment_session/2]).
--export([unwrap_merchant_id/1]).
--export([wrap_merchant_id/2]).
 
 -type processing_context() :: capi_handler:processing_context().
 -type response() :: capi_handler:response().
@@ -115,16 +113,3 @@ wrap_payment_session(ClientInfo, PaymentSession) ->
         <<"clientInfo">> => ClientInfo,
         <<"paymentSession">> => PaymentSession
     }).
-
--spec unwrap_merchant_id(binary()) -> {binary(), binary()}.
-unwrap_merchant_id(Encoded) ->
-    case binary:split(Encoded, <<$:>>) of
-        [RealmMode, ShopID] ->
-            {RealmMode, ShopID};
-        _ ->
-            erlang:throw(invalid_merchant_id)
-    end.
-
--spec wrap_merchant_id(binary(), binary()) -> binary().
-wrap_merchant_id(RealmMode, ShopID) ->
-    <<RealmMode/binary, $:, ShopID/binary>>.

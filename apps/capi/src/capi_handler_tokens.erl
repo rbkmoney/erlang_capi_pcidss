@@ -320,7 +320,10 @@ maybe_store_token_in_tds(_, _IdempotentParams, _Context) ->
     undefined.
 
 process_tokenized_card_data(Data, IdempotentParams, Context) ->
-    Call = {get_token_provider_service_name(Data), 'Unwrap', {encode_wrapped_payment_tool(Data)}},
+    Claims = capi_handler_utils:get_auth_context(Context),
+    RealmMode = uac_authorizer_jwt:get_claim(<<"realm">>, Claims, undefined),
+    Args = {encode_wrapped_payment_tool(Data, RealmMode)},
+    Call = {get_token_provider_service_name(Data), 'Unwrap', Args},
     UnwrappedPaymentTool =
         case capi_handler_utils:service_call(Call, Context) of
             {ok, Tool} ->
@@ -353,28 +356,13 @@ get_token_provider_service_name(Data) ->
             payment_tool_provider_yandex_pay
     end.
 
-get_token_merchant_id(#{<<"provider">> := <<"GooglePay">>} = Data) ->
-    maps:get(<<"gatewayMerchantID">>, Data);
-get_token_merchant_id(#{<<"provider">> := <<"YandexPay">>} = Data) ->
-    maps:get(<<"gatewayMerchantID">>, Data);
-get_token_merchant_id(_Data) ->
-    undefined.
-
-encode_wrapped_payment_tool(Data) ->
+encode_wrapped_payment_tool(Data, Realm) ->
     #paytoolprv_WrappedPaymentTool{
         request = encode_payment_request(Data),
-        realm = encode_realm_mode(Data)
+        realm = encode_realm_mode(Realm)
     }.
 
-encode_realm_mode(Data) ->
-    RealmMode =
-        case get_token_merchant_id(Data) of
-            undefined ->
-                undefined;
-            MerchantID ->
-                {Value, _} = capi_handler_utils:unwrap_merchant_id(MerchantID),
-                Value
-        end,
+encode_realm_mode(RealmMode) ->
     case RealmMode of
         undefined ->
             undefined;
