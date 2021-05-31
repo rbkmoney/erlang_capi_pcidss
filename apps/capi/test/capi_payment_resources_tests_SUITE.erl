@@ -54,9 +54,9 @@
     authorization_error_no_permission_test/1,
     authorization_bad_token_error_test/1,
 
-    invoice_restriction_payment_resource_test/1,
+    check_support_decrypt_v2_test/1,
     valid_until_payment_resource_test/1,
-    check_support_decrypt_v2_test/1
+    token_restriction_test/1
 ]).
 
 -define(CAPI_PORT, 8080).
@@ -127,9 +127,10 @@ groups() ->
             authorization_error_no_permission_test,
             authorization_bad_token_error_test,
 
-            invoice_restriction_payment_resource_test,
-            valid_until_payment_resource_test,
-            check_support_decrypt_v2_test
+            check_support_decrypt_v2_test,
+            token_restriction_test,
+            valid_until_payment_resource_test
+
         ]},
         {ip_replacement_allowed, [], [
             ip_replacement_allowed_test
@@ -1055,39 +1056,6 @@ authorization_bad_token_error_test(Config) ->
         ?TEST_PAYMENT_TOOL_ARGS
     ).
 
--spec invoice_restriction_payment_resource_test(_) -> _.
-invoice_restriction_payment_resource_test(Config) ->
-    {ok, #{<<"paymentToolToken">> := PaymentToolToken}} =
-      capi_client_tokens:create_payment_resource(?config(context, Config), #{
-        <<"paymentTool">> => #{
-            <<"paymentToolType">> => <<"PaymentTerminalData">>,
-            <<"provider">> => <<"euroset">>
-        },
-        <<"clientInfo">> => #{<<"fingerprint">> => <<"test fingerprint">>}
-    }),
-    logger:warning("PaymentToolToken: ~p", [PaymentToolToken]),
-    {ok, #{restriction := Restriction}} = capi_crypto:decode_token(PaymentToolToken),
-    ?assertEqual({invoice_id, ?STRING}, Restriction).
-
--spec valid_until_payment_resource_test(_) -> _.
-valid_until_payment_resource_test(Config) ->
-    {ok, #{
-        <<"paymentToolToken">> := PaymentToolToken,
-        <<"validUntil">> := ValidUntil
-    }} = capi_client_tokens:create_payment_resource(?config(context, Config), #{
-        <<"paymentTool">> => #{
-            <<"paymentToolType">> => <<"CryptoWalletData">>,
-            <<"cryptoCurrency">> => <<"bitcoinCash">>
-        },
-        <<"clientInfo">> => #{
-            <<"fingerprint">> =>
-                <<"test fingerprint">>
-        }
-    }),
-    {ok, #{valid_until := DeadlineToken}} = capi_crypto:decode_token(PaymentToolToken),
-    Deadline = capi_utils:deadline_from_binary(ValidUntil),
-    ?assertEqual(Deadline, DeadlineToken).
-
 -spec check_support_decrypt_v2_test(config()) -> _.
 check_support_decrypt_v2_test(_Config) ->
     PaymentToolToken = <<
@@ -1110,6 +1078,39 @@ check_support_decrypt_v2_test(_Config) ->
         PaymentTool
     ),
     ?assertEqual(<<"2020-10-29T23:44:15.499Z">>, capi_utils:deadline_to_binary(ValidUntil)).
+
+-spec valid_until_payment_resource_test(_) -> _.
+valid_until_payment_resource_test(Config) ->
+    {ok, #{
+        <<"paymentToolToken">> := PaymentToolToken,
+        <<"validUntil">> := ValidUntil
+    }} = capi_client_tokens:create_payment_resource(?config(context, Config), #{
+        <<"paymentTool">> => #{
+            <<"paymentToolType">> => <<"CryptoWalletData">>,
+            <<"cryptoCurrency">> => <<"bitcoinCash">>
+        },
+        <<"clientInfo">> => #{
+            <<"fingerprint">> =>
+                <<"test fingerprint">>
+        }
+    }),
+    {ok, #{valid_until := DeadlineToken}} = capi_crypto:decode_token(PaymentToolToken),
+    Deadline = capi_utils:deadline_from_binary(ValidUntil),
+    ?assertEqual(Deadline, DeadlineToken).
+
+-spec token_restriction_test(_) -> _.
+token_restriction_test(Config) ->
+    {ok, #{<<"paymentToolToken">> := PaymentToolToken}} =
+        capi_client_tokens:create_payment_resource(?config(context, Config), #{
+            <<"paymentTool">> => #{
+                <<"paymentToolType">> => <<"PaymentTerminalData">>,
+                <<"provider">> => <<"euroset">>
+            },
+            <<"clientInfo">> => #{<<"fingerprint">> => <<"test fingerprint">>}
+        }),
+    logger:warning("PaymentToolToken: ~p", [PaymentToolToken]),
+    {ok, TokenData} = capi_crypto:decode_token(PaymentToolToken),
+    ?assertMatch(#{invoice_link := ?STRING}, TokenData).
 
 %%
 

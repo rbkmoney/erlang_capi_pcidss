@@ -44,8 +44,13 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                 #{<<"paymentToolType">> := <<"MobileCommerceData">>} ->
                     {process_mobile_commerce_data(Data, Context), <<>>, undefined}
             end,
-        TokenData1 = choose_token_deadline(#{payment_tool => PaymentTool}, PaymentToolDeadline),
-        TokenData = choose_token_link(TokenData1, Context),
+        TokenData = maps:merge(
+            #{
+                payment_tool => PaymentTool,
+                valid_until => choose_token_deadline(PaymentToolDeadline)
+            },
+            choose_token_links(Context)
+        ),
         PaymentResource = #domain_DisposablePaymentResource{
             payment_tool = PaymentTool,
             payment_session_id = PaymentSessionID,
@@ -73,22 +78,18 @@ process_request(_OperationID, _Req, _Context) ->
 
 % Ограничиваем время жизни платежного токена временем жизни платежного инструмента.
 % Если время жизни платежного инструмента не задано, то интервалом заданным в настройках.
--spec choose_token_deadline(capi_crypto:token_data(), capi_utils:deadline()) -> capi_crypto:token_data().
-choose_token_deadline(TokenData, undefined) ->
-    TokenData#{valid_until => payment_tool_token_deadline()};
-choose_token_deadline(TokenData, PaymentToolDeadline) ->
-    ValidUntil = erlang:min(PaymentToolDeadline, payment_tool_token_deadline()),
-    TokenData#{valid_until => ValidUntil}.
+-spec choose_token_deadline(capi_utils:deadline()) -> capi_utils:deadline().
+choose_token_deadline(undefined) ->
+    payment_tool_token_deadline();
+choose_token_deadline(PaymentToolDeadline) ->
+    erlang:min(PaymentToolDeadline, payment_tool_token_deadline()).
 
--spec choose_token_link(capi_crypto:token_data(), capi_handler:processing_context()) -> capi_crypto:token_data().
-choose_token_link(TokenData, Context) ->
+-spec choose_token_links(capi_handler:processing_context()) -> #{invoice_link := binary() | undefined}.
+choose_token_links(Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
-    case uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined) of
-        undefined ->
-            TokenData;
-        InvoiceID ->
-            TokenData#{restriction => {invoice_id, InvoiceID}}
-    end.
+    #{
+        invoice_link => uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined)
+    }.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().
 payment_tool_token_deadline() ->
