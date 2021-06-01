@@ -84,11 +84,11 @@ choose_token_deadline(undefined) ->
 choose_token_deadline(PaymentToolDeadline) ->
     erlang:min(PaymentToolDeadline, payment_tool_token_deadline()).
 
--spec choose_token_links(capi_handler:processing_context()) -> #{invoice_link := binary() | undefined}.
+-spec choose_token_links(capi_handler:processing_context()) -> #{invoice_id := binary() | undefined}.
 choose_token_links(Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
     #{
-        invoice_link => uac_authorizer_jwt:get_claim(<<"invoice_link">>, Claims, undefined)
+        invoice_id => uac_authorizer_jwt:get_claim(<<"invoice_id">>, Claims, undefined)
     }.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().

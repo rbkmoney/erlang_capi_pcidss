@@ -155,7 +155,7 @@ end_per_suite(C) ->
 
 -spec init_per_group(group_name(), config()) -> config().
 init_per_group(payment_resources, Config) ->
-    ExtraProperties = #{<<"invoice_link">> => ?STRING},
+    ExtraProperties = #{<<"invoice_id">> => ?STRING},
     Token = capi_ct_helper:issue_token(?STRING, [{[payment_resources], write}], unlimited, ExtraProperties),
     [{context, capi_ct_helper:get_context(Token)} | Config];
 init_per_group(ip_replacement_allowed, Config) ->
@@ -1106,7 +1106,7 @@ token_restriction_test(Config) ->
         }),
     logger:warning("PaymentToolToken: ~p", [PaymentToolToken]),
     {ok, TokenData} = capi_crypto:decode_token(PaymentToolToken),
-    ?assertMatch(#{invoice_link := ?STRING}, TokenData).
+    ?assertMatch(#{invoice_id := ?STRING}, TokenData).
 
 %%
 
