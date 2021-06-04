@@ -28,7 +28,7 @@
 -type bank_info() :: #{
     payment_system := dmsl_domain_thrift:'LegacyBankCardPaymentSystem'(),
     bank_name := binary(),
-    issuer_country := dmsl_domain_thrift:'Residence'() | undefined,
+    issuer_country := dmsl_domain_thrift:'CountryCode'() | undefined,
     category := binary() | undefined,
     metadata := {_MetaNS :: binary(), map()}
 }.
@@ -223,15 +223,15 @@ decode_payment_system(PaymentSystem) ->
 
 %% Residence mapping
 %%
--spec decode_issuer_country(binary() | undefined) -> dmsl_domain_thrift:'Residence'() | undefined.
-decode_issuer_country(Residence) when is_binary(Residence) ->
+-spec decode_issuer_country(binary() | undefined) -> dmsl_domain_thrift:'CountryCode'() | undefined.
+decode_issuer_country(CountryCode) when is_binary(CountryCode) ->
     try
-        {enum, Variants} = dmsl_domain_thrift:enum_info('Residence'),
-        Variant = erlang:list_to_existing_atom(string:to_lower(erlang:binary_to_list(Residence))),
+        {enum, Variants} = dmsl_domain_thrift:enum_info('CountryCode'),
+        Variant = erlang:list_to_existing_atom(string:to_lower(erlang:binary_to_list(CountryCode))),
         element(1, lists:keyfind(Variant, 1, Variants))
     catch
         error:badarg ->
-            _ = logger:warning("unknown residence encountered: ~s", [Residence]),
+            _ = logger:warning("unknown residence encountered: ~s", [CountryCode]),
             ?invalid(issuer_country)
     end;
 decode_issuer_country(undefined) ->
