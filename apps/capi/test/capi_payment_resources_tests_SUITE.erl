@@ -56,7 +56,7 @@
 
     check_support_decrypt_v2_test/1,
     valid_until_payment_resource_test/1,
-    token_restriction_test/1
+    payment_tool_token_link_test/1
 ]).
 
 -define(CAPI_PORT, 8080).
@@ -128,7 +128,7 @@ groups() ->
             authorization_bad_token_error_test,
 
             check_support_decrypt_v2_test,
-            token_restriction_test,
+            payment_tool_token_link_test,
             valid_until_payment_resource_test
         ]},
         {ip_replacement_allowed, [], [
@@ -155,7 +155,7 @@ end_per_suite(C) ->
 
 -spec init_per_group(group_name(), config()) -> config().
 init_per_group(payment_resources, Config) ->
-    ExtraProperties = #{<<"invoice_id">> => ?STRING},
+    ExtraProperties = #{<<"token_link">> => #{<<"invoice_id">> => ?STRING}},
     Token = capi_ct_helper:issue_token(?STRING, [{[payment_resources], write}], unlimited, ExtraProperties),
     [{context, capi_ct_helper:get_context(Token)} | Config];
 init_per_group(ip_replacement_allowed, Config) ->
@@ -1094,8 +1094,8 @@ valid_until_payment_resource_test(Config) ->
     Deadline = capi_utils:deadline_from_binary(ValidUntil),
     ?assertEqual(Deadline, DeadlineToken).
 
--spec token_restriction_test(_) -> _.
-token_restriction_test(Config) ->
+-spec payment_tool_token_link_test(_) -> _.
+payment_tool_token_link_test(Config) ->
     {ok, #{<<"paymentToolToken">> := PaymentToolToken}} =
         capi_client_tokens:create_payment_resource(?config(context, Config), #{
             <<"paymentTool">> => #{
@@ -1106,7 +1106,7 @@ token_restriction_test(Config) ->
         }),
     logger:warning("PaymentToolToken: ~p", [PaymentToolToken]),
     {ok, TokenData} = capi_crypto:decode_token(PaymentToolToken),
-    ?assertMatch(#{invoice_id := ?STRING}, TokenData).
+    ?assertMatch(#{token_link := {invoice_id, ?STRING}}, TokenData).
 
 %%
 

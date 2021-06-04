@@ -6,16 +6,17 @@
 -type token_data() :: #{
     payment_tool := payment_tool(),
     valid_until := deadline(),
-    invoice_id => binary() | undefined
+    token_link => token_link()
 }.
+-type token_link() :: dmsl_payment_tool_token_thrift:'PaymentToolTokenLink'() | undefined.
 -type payment_tool() :: dmsl_domain_thrift:'PaymentTool'().
 -type payment_tool_token() :: dmsl_payment_tool_token_thrift:'PaymentToolToken'().
 -type payment_tool_token_payload() :: dmsl_payment_tool_token_thrift:'PaymentToolTokenPayload'().
--type restriction() :: dmsl_payment_tool_token_thrift:'RestrictionUsing'().
 -type deadline() :: capi_utils:deadline().
 
 -export_type([token/0]).
 -export_type([token_data/0]).
+-export_type([token_link/0]).
 
 -export([encode_token/1]).
 -export([decode_token/1]).
@@ -35,8 +36,6 @@ decode_token(Token) ->
     case Token of
         <<Ver:Size/binary, $., EncryptedPaymentToolToken/binary>> ->
             decrypt_token(EncryptedPaymentToolToken);
-        <<"v2", $., EncryptedPaymentToolToken/binary>> ->
-            decrypt_token(EncryptedPaymentToolToken);
         _ ->
             unrecognized
     end.
@@ -44,7 +43,7 @@ decode_token(Token) ->
 %% Internal
 
 token_version() ->
-    <<"v3">>.
+    <<"v2">>.
 
 decrypt_token(EncryptedPaymentToolToken) ->
     ThriftType = {struct, struct, {dmsl_payment_tool_token_thrift, 'PaymentToolToken'}},
@@ -53,7 +52,7 @@ decrypt_token(EncryptedPaymentToolToken) ->
             {ok, #{
                 payment_tool => decode_payment_tool_token_payload(PaymentToolToken#ptt_PaymentToolToken.payload),
                 valid_until => decode_deadline(PaymentToolToken#ptt_PaymentToolToken.valid_until),
-                invoice_id => decode_invoice_link(PaymentToolToken#ptt_PaymentToolToken.restriction)
+                token_link => PaymentToolToken#ptt_PaymentToolToken.token_link
             }};
         {error, _} = Error ->
             Error
@@ -64,7 +63,7 @@ encode_payment_tool_token(#{payment_tool := PaymentTool} = TokenData) ->
     #ptt_PaymentToolToken{
         payload = encode_payment_tool_token_payload(PaymentTool),
         valid_until = encode_deadline(maps:get(valid_until, TokenData)),
-        restriction = encode_restriction(TokenData)
+        token_link = maps:get(token_link, TokenData, undefined)
     }.
 
 -spec encode_deadline(deadline()) -> binary() | undefined.
@@ -72,16 +71,6 @@ encode_deadline(undefined) ->
     undefined;
 encode_deadline(Deadline) ->
     capi_utils:deadline_to_binary(Deadline).
-
--spec encode_restriction(token_data()) -> restriction() | undefined.
-encode_restriction(TokenData) ->
-    InvoiceLink = maps:get(invoice_id, TokenData, undefined),
-    case {InvoiceLink} of
-        {undefined} ->
-            undefined;
-        _ ->
-            #ptt_RestrictionUsing{invoice_id = InvoiceLink}
-    end.
 
 -spec encode_payment_tool_token_payload(payment_tool()) -> payment_tool_token_payload().
 encode_payment_tool_token_payload({bank_card, BankCard}) ->
@@ -110,12 +99,6 @@ decode_deadline(undefined) ->
     undefined;
 decode_deadline(Deadline) ->
     capi_utils:deadline_from_binary(Deadline).
-
--spec decode_invoice_link(restriction() | undefined) -> binary() | undefined.
-decode_invoice_link(undefined) ->
-    undefined;
-decode_invoice_link(#ptt_RestrictionUsing{invoice_id = InvoiceID}) ->
-    InvoiceID.
 
 -spec decode_payment_tool_token_payload(payment_tool_token_payload()) -> payment_tool().
 decode_payment_tool_token_payload(PaymentToolToken) ->

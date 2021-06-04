@@ -44,13 +44,11 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                 #{<<"paymentToolType">> := <<"MobileCommerceData">>} ->
                     {process_mobile_commerce_data(Data, Context), <<>>, undefined}
             end,
-        TokenData = maps:merge(
-            #{
-                payment_tool => PaymentTool,
-                valid_until => choose_token_deadline(PaymentToolDeadline)
-            },
-            choose_token_links(Context)
-        ),
+        TokenData = #{
+            payment_tool => PaymentTool,
+            valid_until => choose_token_deadline(PaymentToolDeadline),
+            token_link => choose_token_link(Context)
+        },
         PaymentResource = #domain_DisposablePaymentResource{
             payment_tool = PaymentTool,
             payment_session_id = PaymentSessionID,
@@ -64,8 +62,6 @@ process_request('CreatePaymentResource' = OperationID, Req, Context) ->
                     maps:get(valid_until, TokenData)
                 )}}
     catch
-        invalid_merchant_id ->
-            throw({ok, logic_error(invalidRequest, <<"Tokenized card data is invalid">>)});
         Result ->
             Result
     end;
@@ -84,12 +80,17 @@ choose_token_deadline(undefined) ->
 choose_token_deadline(PaymentToolDeadline) ->
     erlang:min(PaymentToolDeadline, payment_tool_token_deadline()).
 
--spec choose_token_links(capi_handler:processing_context()) -> #{invoice_id := binary() | undefined}.
-choose_token_links(Context) ->
+-spec choose_token_link(capi_handler:processing_context()) -> capi_crypto:token_link().
+choose_token_link(Context) ->
     Claims = capi_handler_utils:get_auth_context(Context),
-    #{
-        invoice_id => uac_authorizer_jwt:get_claim(<<"invoice_id">>, Claims, undefined)
-    }.
+    case uac_authorizer_jwt:get_claim(<<"token_link">>, Claims, undefined) of
+        undefined ->
+            undefined;
+        #{<<"invoice_id">> := InvoiceID} ->
+            {invoice_id, InvoiceID};
+        _Other ->
+            throw({ok, logic_error(invalidRequest, <<"Token link is invalid">>)})
+    end.
 
 -spec payment_tool_token_deadline() -> capi_utils:deadline().
 payment_tool_token_deadline() ->
